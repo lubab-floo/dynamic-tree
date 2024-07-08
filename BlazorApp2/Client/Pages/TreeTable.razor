@@ -1,0 +1,135 @@
+@page "/treetable"
+@using System.Text
+@using BlazorApp2.Shared
+@inject HttpClient Http
+
+<style>
+    table{
+        width: 100%;
+    }
+    
+    /*tr.header > th, tr.header > td {*/
+    /*    background-color: lightgray;*/
+    /*}*/
+    
+    /*.parent, .parent > thead > tr > th, .parent > tbody > tr > td {*/
+    /*    border: 1px solid;*/
+    /*    border-collapse: collapse;*/
+    /*    padding: 0;*/
+    /*    margin: 0;*/
+    /*}*/
+    
+    /*.children tr:first-child td {*/
+    /*    border-bottom: 1px solid;*/
+    /*}*/
+    
+    /*.children tr:last-child td {*/
+    /*    border-bottom: 0;*/
+    /*}*/
+
+    table, tr {
+        border-bottom: 1px solid black;
+    }
+    
+    table.children:last-child, table.children tr:last-child {
+        border-bottom: 0;
+    }
+    
+    th:first-child, td:first-child, th.number, td.number {
+        width: 60px;
+    }
+    
+    th, td {
+        text-align: left;
+    }
+</style>
+
+<h3>Tree Table</h3>
+
+<div>
+    @if (_tree == null)
+    {
+        <p>
+            <em>Loading...</em>
+        </p>
+    }
+    else
+    {
+        @((MarkupString)RenderTree(_tree))
+    }
+</div>
+
+@code {
+    private TreeNode<string>? _tree;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _tree = await Http.GetFromJsonAsync<TreeNode<string>>("api/tree");
+    }
+
+    private static string RenderTree(TreeNode<string> root)
+    {
+        var htmlTable = new StringBuilder();
+
+        htmlTable.Append("<table class=\"parent\">");
+        htmlTable.Append("<thead>");
+        htmlTable.Append("<tr class=\"header\"><th>Level</th><th colspan=\"2\">Value</th></tr>");
+        htmlTable.Append("</thead>");
+
+        htmlTable.Append("<tbody>");
+        htmlTable.Append(Traverse(root, 0));
+        htmlTable.Append("</tbody>");
+        htmlTable.Append("</table>");
+
+        Console.WriteLine(htmlTable.ToString());
+
+        return htmlTable.ToString();
+
+        StringBuilder Traverse(TreeNode<string> node, int level, bool isChildren = false)
+        {
+            var table = new StringBuilder();
+            if (level == 0)
+            {
+                table.Append("<tr class=\"header\">");
+                table.Append($"<td class=\"number\">{level}</td>");
+                table.Append($"<td colspan=\"2\">{node.Value}</td>");
+                table.Append("</tr>");
+
+                foreach (var child in node.Children)
+                {
+                    table.Append(Traverse(child, level + 1));
+                }
+
+                return table;
+            }
+
+            table.Append("<tr>");
+            table.Append("<td></td>");
+            table.Append($"<td class=\"number\">{level}</td>");
+            table.Append($"<td>{node.Value}</td>");
+            table.Append("</tr>");
+
+            if (!node.Children.Any()) return table;
+
+            table.Append("<tr>");
+            table.Append("<td></td>");
+
+            table.Append("<td colspan=\"2\">");
+            table.Append("<table class=\"children\">");
+            table.Append("<tbody>");
+
+            foreach (var child in node.Children)
+            {
+                table.Append(Traverse(child, level + 1));
+            }
+
+            table.Append("</tbody>");
+            table.Append("</table>");
+            table.Append("</td>");
+            table.Append("</tr>");
+
+            return table;
+        }
+    }
+
+}
